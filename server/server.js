@@ -3,6 +3,7 @@ const cors = require("cors");
 require("dotenv").config();
 
 const connectDB = require("./config/db");
+const equipmentRoutes = require("./routes/equipmentRoutes");
 
 const app = express();
 
@@ -16,6 +17,8 @@ app.get("/", (req, res) => {
     message: "MaintAI API is running",
   });
 });
+
+app.use("/api/equipment", equipmentRoutes);
 
 const PORT = process.env.PORT || 5000;
 
