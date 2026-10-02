@@ -27,6 +27,16 @@ const issueSchema = new mongoose.Schema(
       },
     ],
 
+    ruleResults: [
+      {
+        sensor: String,
+        value: Number,
+        unit: String,
+        status: String,
+        message: String,
+      },
+    ],
+
     observations: [String],
 
     possibleCauses: [String],

@@ -6,6 +6,7 @@ const {
   getIssueById,
   updateIssue,
   deleteIssue,
+  analyzeIssue,
 } = require("../controllers/issueController");
 
 router.post("/", createIssue);
@@ -17,5 +18,7 @@ router.get("/:id", getIssueById);
 router.put("/:id", updateIssue);
 
 router.delete("/:id", deleteIssue);
+
+router.post("/:id/analyze", analyzeIssue);
 
 module.exports = router;

@@ -1,5 +1,9 @@
 const Issue = require("../models/Issue");
 const Equipment = require("../models/Equipment");
+const {
+  checkSensorRules,
+  calculatePriority,
+} = require("../services/ruleEngine");
 
 const createIssue = async (req, res) => {
   try {
@@ -139,10 +143,49 @@ const deleteIssue = async (req, res) => {
   }
 };
 
+const analyzeIssue = async (req, res) => {
+  try {
+    const issue = await Issue.findById(req.params.id);
+
+    if (!issue) {
+      return res.status(404).json({
+        success: false,
+        message: "Issue not found",
+      });
+    }
+
+    const ruleResults = checkSensorRules(issue.sensorReadings);
+
+    const priority = calculatePriority(ruleResults);
+
+    issue.priority = priority;
+    issue.ruleResults = ruleResults;
+
+    await issue.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Issue analyzed successfully",
+      data: {
+        issueId: issue._id,
+        priority,
+        ruleResults,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to analyze issue",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createIssue,
   getAllIssues,
   getIssueById,
   updateIssue,
   deleteIssue,
+  analyzeIssue,
 };
