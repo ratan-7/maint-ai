@@ -5,6 +5,10 @@ const {
   calculatePriority,
 } = require("../services/ruleEngine");
 
+const { searchKnowledge } = require("../services/knowledgeService");
+
+const { analyzeWithAI } = require("../services/aiService");
+
 const createIssue = async (req, res) => {
   try {
     const { equipmentId, description, operatingEvents, sensorReadings } =
@@ -154,25 +158,68 @@ const analyzeIssue = async (req, res) => {
       });
     }
 
+    const equipment = await Equipment.findById(issue.equipmentId);
+
+    if (!equipment) {
+      return res.status(404).json({
+        success: false,
+        message: "Equipment not found",
+      });
+    }
+
     const ruleResults = checkSensorRules(issue.sensorReadings);
 
     const priority = calculatePriority(ruleResults);
 
-    issue.priority = priority;
+    const searchQuery = `
+      ${equipment.type}
+      ${issue.description}
+      ${issue.operatingEvents.join(" ")}
+    `;
+
+    const knowledgeResults = searchKnowledge(searchQuery);
+
+    const aiResult = await analyzeWithAI({
+      equipment,
+      issue,
+      ruleResults,
+      knowledge: knowledgeResults,
+    });
+
     issue.ruleResults = ruleResults;
+    issue.priority = priority;
+
+    issue.observations = aiResult.observations || [];
+    issue.possibleCauses = aiResult.possibleCauses || [];
+    issue.confirmedFindings = aiResult.confirmedFindings || [];
+    issue.followUpQuestions = aiResult.followUpQuestions || [];
+    issue.inspectionSteps = aiResult.inspectionSteps || [];
 
     await issue.save();
 
     res.status(200).json({
       success: true,
       message: "Issue analyzed successfully",
+
       data: {
         issueId: issue._id,
+        equipment,
         priority,
         ruleResults,
+
+        observations: aiResult.observations,
+        possibleCauses: aiResult.possibleCauses,
+        confirmedFindings: aiResult.confirmedFindings,
+        followUpQuestions: aiResult.followUpQuestions,
+        inspectionSteps: aiResult.inspectionSteps,
+        evidence: aiResult.evidence,
+
+        workOrder: aiResult.workOrder,
       },
     });
   } catch (error) {
+    console.error(error);
+
     res.status(500).json({
       success: false,
       message: "Failed to analyze issue",
