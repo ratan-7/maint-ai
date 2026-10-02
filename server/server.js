@@ -4,6 +4,7 @@ require("dotenv").config();
 
 const connectDB = require("./config/db");
 const equipmentRoutes = require("./routes/equipmentRoutes");
+const issueRoutes = require("./routes/issueRoutes");
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/equipment", equipmentRoutes);
+app.use("/api/issues", issueRoutes);
 
 const PORT = process.env.PORT || 5000;
 
