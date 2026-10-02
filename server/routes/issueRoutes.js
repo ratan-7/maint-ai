@@ -9,9 +9,13 @@ const {
   analyzeIssue,
 } = require("../controllers/issueController");
 
+const { searchKnowledgeBase } = require("../controllers/knowledgeController");
+
 router.post("/", createIssue);
 
 router.get("/", getAllIssues);
+
+router.get("/knowledge/search", searchKnowledgeBase);
 
 router.get("/:id", getIssueById);
 
