@@ -6,6 +6,7 @@ const connectDB = require("./config/db");
 const equipmentRoutes = require("./routes/equipmentRoutes");
 const issueRoutes = require("./routes/issueRoutes");
 const workOrderRoutes = require("./routes/workOrderRoutes");
+const maintenanceHistoryRoutes = require("./routes/maintenanceHistoryRoutes");
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.get("/", (req, res) => {
 app.use("/api/equipment", equipmentRoutes);
 app.use("/api/issues", issueRoutes);
 app.use("/api/work-orders", workOrderRoutes);
+app.use("/api/maintenance-history", maintenanceHistoryRoutes);
 
 const PORT = process.env.PORT || 5000;
 

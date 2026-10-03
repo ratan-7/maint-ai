@@ -1,7 +1,7 @@
 const WorkOrder = require("../models/WorkOrder");
 const Issue = require("../models/Issue");
 const Equipment = require("../models/Equipment");
-
+const MaintenanceHistory = require("../models/MaintenanceHistory");
 
 const createWorkOrder = async (req, res) => {
   try {
@@ -47,7 +47,6 @@ const createWorkOrder = async (req, res) => {
   }
 };
 
-
 const getWorkOrderById = async (req, res) => {
   try {
     const workOrder = await WorkOrder.findById(req.params.id)
@@ -73,7 +72,6 @@ const getWorkOrderById = async (req, res) => {
     });
   }
 };
-
 
 const updateWorkOrder = async (req, res) => {
   try {
@@ -111,7 +109,6 @@ const updateWorkOrder = async (req, res) => {
   }
 };
 
-
 const approveWorkOrder = async (req, res) => {
   try {
     const workOrder = await WorkOrder.findById(req.params.id);
@@ -133,6 +130,14 @@ const approveWorkOrder = async (req, res) => {
     workOrder.status = "APPROVED";
 
     await workOrder.save();
+
+    await MaintenanceHistory.create({
+      equipmentId: workOrder.equipmentId,
+      issueId: workOrder.issueId,
+      workOrderId: workOrder._id,
+      action: "APPROVED",
+      description: workOrder.description,
+    });
 
     res.status(200).json({
       success: true,
