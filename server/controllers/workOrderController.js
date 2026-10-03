@@ -47,6 +47,26 @@ const createWorkOrder = async (req, res) => {
   }
 };
 
+const getWorkOrders = async (req, res) => {
+  try {
+    const workOrders = await WorkOrder.find().sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      count: workOrders.length,
+      data: workOrders,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch work orders",
+      error: error.message,
+    });
+  }
+};
+
 const getWorkOrderById = async (req, res) => {
   try {
     const workOrder = await WorkOrder.findById(req.params.id)
@@ -192,6 +212,7 @@ const rejectWorkOrder = async (req, res) => {
 
 module.exports = {
   createWorkOrder,
+  getWorkOrders,
   getWorkOrderById,
   updateWorkOrder,
   approveWorkOrder,

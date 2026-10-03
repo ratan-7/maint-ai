@@ -1,13 +1,15 @@
 const Issue = require("../models/Issue");
 const Equipment = require("../models/Equipment");
+const WorkOrder = require("../models/WorkOrder");
+
 const {
   checkSensorRules,
   calculatePriority,
 } = require("../services/ruleEngine");
 
 const { searchKnowledge } = require("../services/knowledgeService");
-
 const { analyzeWithAI } = require("../services/aiService");
+
 const {
   validateSensorReadings,
   detectConflictingSensors,
@@ -53,13 +55,15 @@ const createIssue = async (req, res) => {
       sensorReadings: sensorReadings || [],
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: "Issue created successfully",
       data: issue,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Create Issue Error:", error);
+
+    return res.status(500).json({
       success: false,
       message: "Failed to create issue",
       error: error.message,
@@ -73,13 +77,15 @@ const getAllIssues = async (req, res) => {
       .populate("equipmentId")
       .sort({ createdAt: -1 });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       count: issues.length,
       data: issues,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Get Issues Error:", error);
+
+    return res.status(500).json({
       success: false,
       message: "Failed to fetch issues",
       error: error.message,
@@ -98,12 +104,14 @@ const getIssueById = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: issue,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Get Issue Error:", error);
+
+    return res.status(500).json({
       success: false,
       message: "Failed to fetch issue",
       error: error.message,
@@ -125,13 +133,15 @@ const updateIssue = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Issue updated successfully",
       data: issue,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Update Issue Error:", error);
+
+    return res.status(500).json({
       success: false,
       message: "Failed to update issue",
       error: error.message,
@@ -150,12 +160,14 @@ const deleteIssue = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Issue deleted successfully",
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Delete Issue Error:", error);
+
+    return res.status(500).json({
       success: false,
       message: "Failed to delete issue",
       error: error.message,
@@ -217,8 +229,8 @@ const analyzeIssue = async (req, res) => {
     const priority = calculatePriority(ruleResults);
 
     const searchQuery = `
-      ${equipment.type}
-      ${issue.description}
+      ${equipment.type || ""}
+      ${issue.description || ""}
       ${(issue.operatingEvents || []).join(" ")}
     `;
 
@@ -234,7 +246,7 @@ const analyzeIssue = async (req, res) => {
         knowledge: knowledgeResults,
       });
     } catch (aiError) {
-      console.error("AI Error:", aiError.message);
+      console.error("AI Error:", aiError);
 
       return res.status(503).json({
         success: false,
@@ -260,12 +272,67 @@ const analyzeIssue = async (req, res) => {
     issue.confirmedFindings = aiResult.confirmedFindings || [];
     issue.followUpQuestions = aiResult.followUpQuestions || [];
     issue.inspectionSteps = aiResult.inspectionSteps || [];
-
     await issue.save();
 
-    res.status(200).json({
+    let workOrder = null;
+
+    const existingWorkOrder = await WorkOrder.findOne({
+      issueId: issue._id,
+    });
+
+    if (existingWorkOrder) {
+      console.log("Existing WorkOrder found:", existingWorkOrder._id);
+
+      workOrder = existingWorkOrder;
+    } else {
+      const aiWorkOrder = aiResult.workOrder || {};
+
+      const workOrderTitle =
+        aiWorkOrder.title ||
+        `Maintenance Work Order - ${equipment.name || "Equipment"}`;
+
+      const workOrderDescription =
+        aiWorkOrder.description ||
+        issue.description ||
+        "Maintenance required for reported issue.";
+
+      const inspectionSteps =
+        aiWorkOrder.inspectionSteps ||
+        aiResult.inspectionSteps ||
+        issue.inspectionSteps ||
+        [];
+
+      console.log("Creating WorkOrder:", {
+        issueId: issue._id,
+        equipmentId: issue.equipmentId,
+        title: workOrderTitle,
+        description: workOrderDescription,
+        inspectionSteps,
+        priority,
+      });
+
+      workOrder = await WorkOrder.create({
+        issueId: issue._id,
+        equipmentId: issue.equipmentId,
+        title: workOrderTitle,
+        description: workOrderDescription,
+        inspectionSteps,
+        priority,
+
+        status: "DRAFT",
+      });
+
+      console.log("WORK ORDER CREATED:", workOrder._id);
+    }
+
+    const message = existingWorkOrder
+      ? "Issue analyzed and existing work order returned"
+      : "Issue analyzed and draft work order created successfully";
+
+    return res.status(200).json({
       success: true,
-      message: "Issue analyzed successfully",
+
+      message,
 
       data: {
         issueId: issue._id,
@@ -278,13 +345,13 @@ const analyzeIssue = async (req, res) => {
         followUpQuestions: aiResult.followUpQuestions || [],
         inspectionSteps: aiResult.inspectionSteps || [],
         evidence: aiResult.evidence || [],
-        workOrder: aiResult.workOrder || null,
+        workOrder,
       },
     });
   } catch (error) {
     console.error("Analyze Issue Error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to analyze issue",
       error: error.message,

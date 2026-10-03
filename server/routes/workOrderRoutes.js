@@ -2,6 +2,7 @@ const express = require("express");
 
 const {
   createWorkOrder,
+  getWorkOrders,
   getWorkOrderById,
   updateWorkOrder,
   approveWorkOrder,
@@ -11,6 +12,8 @@ const {
 const router = express.Router();
 
 router.post("/", createWorkOrder);
+
+router.get("/", getWorkOrders);
 
 router.get("/:id", getWorkOrderById);
 

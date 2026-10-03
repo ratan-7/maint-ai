@@ -1,10 +1,13 @@
 const express = require("express");
 
+const router = express.Router();
+
 const {
+  getMaintenanceHistory,
   getEquipmentHistory,
 } = require("../controllers/maintenanceHistoryController");
 
-const router = express.Router();
+router.get("/", getMaintenanceHistory);
 
 router.get("/equipment/:equipmentId", getEquipmentHistory);
 
