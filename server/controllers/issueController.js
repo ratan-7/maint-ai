@@ -13,6 +13,8 @@ const {
   detectConflictingSensors,
 } = require("../services/validationService");
 
+const isValidObjectId = require("../utils/validateObjectId");
+
 const createIssue = async (req, res) => {
   try {
     const { equipmentId, description, operatingEvents, sensorReadings } =
@@ -163,6 +165,13 @@ const deleteIssue = async (req, res) => {
 
 const analyzeIssue = async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid issue ID",
+      });
+    }
+
     const issue = await Issue.findById(req.params.id);
 
     if (!issue) {
