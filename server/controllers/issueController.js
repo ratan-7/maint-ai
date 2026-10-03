@@ -210,17 +210,39 @@ const analyzeIssue = async (req, res) => {
     const searchQuery = `
       ${equipment.type}
       ${issue.description}
-      ${issue.operatingEvents.join(" ")}
+      ${(issue.operatingEvents || []).join(" ")}
     `;
 
     const knowledgeResults = searchKnowledge(searchQuery);
 
-    const aiResult = await analyzeWithAI({
-      equipment,
-      issue,
-      ruleResults,
-      knowledge: knowledgeResults,
-    });
+    let aiResult;
+
+    try {
+      aiResult = await analyzeWithAI({
+        equipment,
+        issue,
+        ruleResults,
+        knowledge: knowledgeResults,
+      });
+    } catch (aiError) {
+      console.error("AI Error:", aiError.message);
+
+      return res.status(503).json({
+        success: false,
+        message: "AI service is currently unavailable",
+
+        priority,
+        ruleResults,
+
+        fallback: {
+          message:
+            "Deterministic analysis completed, but AI analysis could not be generated.",
+
+          nextStep:
+            "Review the rule results and inspect the equipment manually.",
+        },
+      });
+    }
 
     issue.ruleResults = ruleResults;
     issue.priority = priority;
@@ -241,19 +263,17 @@ const analyzeIssue = async (req, res) => {
         equipment,
         priority,
         ruleResults,
-
-        observations: aiResult.observations,
-        possibleCauses: aiResult.possibleCauses,
-        confirmedFindings: aiResult.confirmedFindings,
-        followUpQuestions: aiResult.followUpQuestions,
-        inspectionSteps: aiResult.inspectionSteps,
-        evidence: aiResult.evidence,
-
-        workOrder: aiResult.workOrder,
+        observations: aiResult.observations || [],
+        possibleCauses: aiResult.possibleCauses || [],
+        confirmedFindings: aiResult.confirmedFindings || [],
+        followUpQuestions: aiResult.followUpQuestions || [],
+        inspectionSteps: aiResult.inspectionSteps || [],
+        evidence: aiResult.evidence || [],
+        workOrder: aiResult.workOrder || null,
       },
     });
   } catch (error) {
-    console.error(error);
+    console.error("Analyze Issue Error:", error);
 
     res.status(500).json({
       success: false,
