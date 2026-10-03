@@ -631,7 +631,6 @@ Example:
 PORT=5000
 MONGO_URI=your_mongodb_connection_string
 OPENAI_API_KEY=your_openai_api_key
-JWT_SECRET=your_jwt_secret
 ```
 
 > Never commit `.env` files or API keys to GitHub.
