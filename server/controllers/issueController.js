@@ -8,6 +8,7 @@ const {
 const { searchKnowledge } = require("../services/knowledgeService");
 
 const { analyzeWithAI } = require("../services/aiService");
+const { validateSensorReadings } = require("../services/validationService");
 
 const createIssue = async (req, res) => {
   try {
@@ -27,6 +28,16 @@ const createIssue = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Equipment not found",
+      });
+    }
+
+    const validationErrors = validateSensorReadings(sensorReadings);
+
+    if (validationErrors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid sensor data",
+        errors: validationErrors,
       });
     }
 
