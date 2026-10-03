@@ -8,7 +8,10 @@ const {
 const { searchKnowledge } = require("../services/knowledgeService");
 
 const { analyzeWithAI } = require("../services/aiService");
-const { validateSensorReadings } = require("../services/validationService");
+const {
+  validateSensorReadings,
+  detectConflictingSensors,
+} = require("../services/validationService");
 
 const createIssue = async (req, res) => {
   try {
@@ -178,6 +181,28 @@ const analyzeIssue = async (req, res) => {
       });
     }
 
+    const validationErrors = validateSensorReadings(issue.sensorReadings);
+
+    if (validationErrors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid sensor data",
+        errors: validationErrors,
+      });
+    }
+
+    const conflicts = detectConflictingSensors(issue.sensorReadings);
+
+    if (conflicts.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "Conflicting sensor readings detected",
+        conflicts,
+        recommendation:
+          "Verify sensor condition and readings before making a maintenance decision.",
+      });
+    }
+
     const ruleResults = checkSensorRules(issue.sensorReadings);
 
     const priority = calculatePriority(ruleResults);
@@ -199,7 +224,6 @@ const analyzeIssue = async (req, res) => {
 
     issue.ruleResults = ruleResults;
     issue.priority = priority;
-
     issue.observations = aiResult.observations || [];
     issue.possibleCauses = aiResult.possibleCauses || [];
     issue.confirmedFindings = aiResult.confirmedFindings || [];
